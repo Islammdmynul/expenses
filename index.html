@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Expenses</title>
+<meta name="theme-color" content="#2F5D50">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Expenses">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #F4F6F3; --card: #FFFFFF; --text: #1E2522; --muted: #66706B; --line: #E1E6E2;
+    --brand: #2F5D50; --brand-soft: #E3EEE9; --brand-text: #FFFFFF;
+    --warn: #C77A12; --warn-soft: #FBF0DF; --bad: #B3402E; --bad-soft: #F8E5E1; --ok: #2F7D4F;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121614; --card: #1C2220; --text: #E8ECEA; --muted: #9AA39F; --line: #2C3431;
+      --brand: #6FB39C; --brand-soft: #22342E; --brand-text: #0F1513;
+      --warn: #E3A54D; --warn-soft: #3A2E1C; --bad: #E5826F; --bad-soft: #3A2320; --ok: #79C79A;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    font-size: 16px; line-height: 1.4;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+  header {
+    position: sticky; top: 0; z-index: 5; background: var(--bg);
+    padding: calc(12px + env(safe-area-inset-top)) 16px 10px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  header h1 { font-size: 20px; margin: 0; }
+  .pill {
+    font-size: 13px; padding: 5px 10px; border-radius: 999px; border: 0;
+    background: var(--brand-soft); color: var(--brand); font-weight: 600; white-space: nowrap;
+  }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  main { max-width: 560px; margin: 0 auto; padding: 0 16px; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; border: 1px solid var(--line); }
+  label.f { display: block; font-size: 14px; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+  .field { margin-bottom: 16px; }
+  input[type=text], input[type=date], input[type=url], input[type=password] {
+    width: 100%; font-size: 17px; padding: 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text); outline: none;
+    -webkit-appearance: none; appearance: none; min-height: 48px;
+  }
+  input:focus { border-color: var(--brand); }
+  input.amount { font-size: 26px; font-weight: 700; letter-spacing: .5px; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opt {
+    border: 1px solid var(--line); background: var(--bg); color: var(--text);
+    font-size: 15px; padding: 11px 12px; border-radius: 10px; min-height: 44px; font-weight: 600;
+  }
+  .chips .opt { padding: 9px 13px; border-radius: 999px; font-weight: 500; }
+  .opt.on { background: var(--brand); color: var(--brand-text); border-color: var(--brand); }
+  .btn {
+    width: 100%; border: 0; border-radius: 12px; padding: 15px; font-size: 17px; font-weight: 700;
+    background: var(--brand); color: var(--brand-text); min-height: 52px;
+  }
+  .btn.ghost { background: var(--brand-soft); color: var(--brand); }
+  .btn.danger { background: var(--bad-soft); color: var(--bad); }
+  .btn + .btn { margin-top: 10px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+  nav.tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+    background: var(--card); border-top: 1px solid var(--line);
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav.tabs button {
+    border: 0; background: none; color: var(--muted); font-size: 12px; font-weight: 600;
+    padding: 8px 0 10px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  nav.tabs button svg { width: 24px; height: 24px; }
+  nav.tabs button.on { color: var(--brand); }
+  .monthbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .monthbar button { border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: 10px; width: 44px; height: 44px; font-size: 20px; }
+  .monthbar strong { font-size: 18px; }
+  .big { font-size: 34px; font-weight: 800; margin: 2px 0 4px; }
+  .sub { color: var(--muted); font-size: 14px; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .bar-row { margin: 10px 0; }
+  .bar-row .row { font-size: 15px; }
+  .bar { height: 8px; background: var(--brand-soft); border-radius: 99px; margin-top: 5px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--brand); border-radius: 99px; }
+  .bar.warnbar > i { background: var(--warn); }
+  h2 { font-size: 16px; margin: 0 0 6px; }
+  .daylabel { font-size: 13px; color: var(--muted); font-weight: 700; margin: 14px 4px 6px; display: flex; justify-content: space-between; }
+  .entry {
+    width: 100%; text-align: left; display: flex; align-items: center; gap: 12px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 8px; color: var(--text); font-size: 16px;
+  }
+  .entry .grow { flex: 1; min-width: 0; }
+  .entry .d { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .entry .m { font-size: 13px; color: var(--muted); }
+  .entry .a { font-weight: 700; white-space: nowrap; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--ok); }
+  .dot.wait { background: transparent; border: 2px solid var(--warn); }
+  .empty { text-align: center; color: var(--muted); padding: 36px 12px; }
+  .toast {
+    position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+    background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: 15px; font-weight: 600;
+    opacity: 0; pointer-events: none; transition: all .2s; z-index: 20; max-width: 90vw; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 30; display: none; align-items: flex-end; }
+  .sheet-bg.show { display: flex; }
+  .sheet { background: var(--card); width: 100%; max-width: 560px; margin: 0 auto; border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
+  .sheet h3 { margin: 0 0 4px; font-size: 18px; }
+  .kv { font-size: 14px; color: var(--muted); margin-bottom: 14px; }
+  .status-box { font-size: 14px; background: var(--bg); border-radius: 10px; padding: 10px 12px; margin-top: 12px; color: var(--muted); }
+  .editing-note { display: none; background: var(--warn-soft); color: var(--warn); font-size: 14px; font-weight: 600; padding: 8px 12px; border-radius: 10px; margin-bottom: 12px; }
+  .editing-note.show { display: flex; justify-content: space-between; align-items: center; }
+  .editing-note button { border: 0; background: none; color: inherit; font-weight: 700; font-size: 14px; text-decoration: underline; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Add expense</h1>
+  <button class="pill" id="syncPill" type="button">…</button>
+</header>
+
+<main>
+  <!-- ADD -->
+  <section class="view active" id="view-add">
+    <div class="editing-note" id="editNote"><span>Editing an entry</span><button type="button" id="cancelEdit">Cancel</button></div>
+    <form class="card" id="addForm" autocomplete="off" novalidate>
+      <div class="field">
+        <label class="f" for="fAmount">Amount</label>
+        <input type="text" id="fAmount" class="amount" inputmode="decimal" placeholder="0">
+      </div>
+      <div class="field">
+        <label class="f" for="fDesc">Description</label>
+        <input type="text" id="fDesc" list="descList" placeholder="e.g. Coffee" maxlength="80">
+        <datalist id="descList"></datalist>
+      </div>
+      <div class="field">
+        <label class="f">Paid by</label>
+        <div class="seg" id="methodSeg">
+          <button type="button" class="opt" data-v="Cash">Cash</button>
+          <button type="button" class="opt" data-v="Card">Card</button>
+          <button type="button" class="opt" data-v="Bank">Bank</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="f">Category <span style="font-weight:400">(optional)</span></label>
+        <div class="chips" id="catChips"></div>
+      </div>
+      <div class="field">
+        <label class="f" for="fDate">Date</label>
+        <input type="date" id="fDate">
+      </div>
+      <button class="btn" type="submit" id="saveBtn">Save</button>
+      <p class="hint">Saved on this phone right away. Copied to your Google Sheet when you're online.</p>
+    </form>
+  </section>
+
+  <!-- LIST -->
+  <section class="view" id="view-list">
+    <div class="monthbar">
+      <button type="button" data-step="-1" aria-label="Previous month">‹</button>
+      <strong class="monthLabel"></strong>
+      <button type="button" data-step="1" aria-label="Next month">›</button>
+    </div>
+    <div id="listBox"></div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section class="view" id="view-summary">
+    <div class="monthbar">
+      <button type="button" data-step="-1" aria-label="Previous month">‹</button>
+      <strong class="monthLabel"></strong>
+      <button type="button" data-step="1" aria-label="Next month">›</button>
+    </div>
+    <div id="summaryBox"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="view" id="view-settings">
+    <div class="card">
+      <h2>Google Sheet backup</h2>
+      <p class="sub" style="margin-top:0">Paste the two values from the setup guide. They are stored only on this phone.</p>
+      <div class="field">
+        <label class="f" for="sUrl">Web app URL</label>
+        <input type="url" id="sUrl" placeholder="https://script.google.com/macros/s/…/exec">
+      </div>
+      <div class="field">
+        <label class="f" for="sKey">Secret key</label>
+        <input type="password" id="sKey" placeholder="The key you set in the script">
+      </div>
+      <button class="btn" type="button" id="saveSettings">Save and test connection</button>
+      <div class="status-box" id="connStatus">Not connected yet.</div>
+    </div>
+    <div class="card">
+      <h2>Sync</h2>
+      <div class="status-box" id="syncInfo" style="margin-top:4px"></div>
+      <button class="btn ghost" type="button" id="syncNow" style="margin-top:12px">Back up now</button>
+      <button class="btn ghost" type="button" id="pullNow">Get latest from Google Sheet</button>
+      <p class="hint">"Get latest" brings in rows you added or fixed directly in the sheet, and is how you restore everything on a new phone.</p>
+    </div>
+    <div class="card">
+      <h2>Extra backup</h2>
+      <button class="btn ghost" type="button" id="exportCsv">Download all as CSV file</button>
+      <p class="hint">Works offline. The file opens in Google Sheets or Excel.</p>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs" id="tabs">
+  <button type="button" data-view="add" class="on">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add</button>
+  <button type="button" data-view="list">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>List</button>
+  <button type="button" data-view="summary">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M12 20V4M19 20v-6"/></svg>Summary</button>
+  <button type="button" data-view="settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+</nav>
+
+<div class="sheet-bg" id="sheetBg">
+  <div class="sheet" role="dialog" aria-modal="true">
+    <h3 id="shTitle"></h3>
+    <div class="kv" id="shInfo"></div>
+    <button class="btn ghost" type="button" id="shEdit">Edit</button>
+    <button class="btn danger" type="button" id="shDelete">Delete</button>
+    <button class="btn ghost" type="button" id="shClose" style="background:none">Close</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var CATEGORIES = ['Food', 'Transport', 'Home & bills', 'Shopping', 'Health', 'Giving', 'Other'];
+  var METHODS = ['Cash', 'Card', 'Bank'];
+  var K = { entries: 'exp.entries', deletes: 'exp.deletes', settings: 'exp.settings', lastSync: 'exp.lastSync' };
+
+  // ---------- storage (always guarded) ----------
+  function load(key, fallback) {
+    try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
+  }
+  function save(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (e) { toast('Could not save on this phone'); return false; }
+  }
+
+  var entries = load(K.entries, []);       // {id,date,desc,amount,method,category,created,synced}
+  var deletes = load(K.deletes, []);       // ids waiting to be removed from the sheet
+  var settings = load(K.settings, { url: '', key: '', method: 'Card' });
+  var lastSync = load(K.lastSync, null);
+  var syncState = 'idle';                  // idle | syncing | error
+  var syncError = '';
+  var editingId = null;
+  var openId = null;
+
+  function persist() { save(K.entries, entries); save(K.deletes, deletes); }
+
+  // ---------- helpers ----------
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function todayStr() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function newId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+  function fmt(n) { return Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function monthName(y, m) { return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
+  function dayLabel(s) {
+    var p = s.split('-'); var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  function pendingCount() { return entries.filter(function (e) { return !e.synced; }).length + deletes.length; }
+  function connected() { return !!(settings.url && settings.key); }
+
+  var toastTimer;
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2200);
+  }
+
+  // ---------- tabs ----------
+  var titles = { add: 'Add expense', list: 'Expenses', summary: 'Monthly summary', settings: 'Settings' };
+  function show(view) {
+    document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('active', v.id === 'view-' + view); });
+    document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.view === view); });
+    $('title').textContent = titles[view];
+    if (view === 'list') renderList();
+    if (view === 'summary') renderSummary();
+    if (view === 'settings') renderSettings();
+    window.scrollTo(0, 0);
+  }
+  $('tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) show(b.dataset.view); });
+
+  // ---------- add form ----------
+  var form = { method: METHODS.indexOf(settings.method) >= 0 ? settings.method : 'Card', category: '' };
+
+  CATEGORIES.forEach(function (c) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'opt'; b.dataset.v = c; b.textContent = c;
+    $('catChips').appendChild(b);
+  });
+  function paintChoices() {
+    document.querySelectorAll('#methodSeg .opt').forEach(function (b) { b.classList.toggle('on', b.dataset.v === form.method); });
+    document.querySelectorAll('#catChips .opt').forEach(function (b) { b.classList.toggle('on', b.dataset.v === form.category); });
+  }
+  $('methodSeg').addEventListener('click', function (e) { var b = e.target.closest('.opt'); if (!b) return; form.method = b.dataset.v; paintChoices(); });
+  $('catChips').addEventListener('click', function (e) {
+    var b = e.target.closest('.opt'); if (!b) return;
+    form.category = form.category === b.dataset.v ? '' : b.dataset.v; paintChoices();
+  });
+
+  $('fAmount').addEventListener('input', function () {
+    var v = this.value.replace(/[^0-9.]/g, '');
+    var i = v.indexOf('.'); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, '');
+    var parts = v.split('.');
+    parts[0] = parts[0].replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    this.value = parts.join('.');
+  });
+
+  // remember category for repeated descriptions
+  $('fDesc').addEventListener('change', function () {
+    if (form.category) return;
+    var d = this.value.trim().toLowerCase(); if (!d) return;
+    for (var i = entries.length - 1; i >= 0; i--) {
+      if (entries[i].desc.toLowerCase() === d && entries[i].category) { form.category = entries[i].category; paintChoices(); break; }
+    }
+  });
+
+  function refreshSuggestions() {
+    var seen = {}, out = [];
+    for (var i = entries.length - 1; i >= 0 && out.length < 40; i--) {
+      var d = entries[i].desc; var k = d.toLowerCase();
+      if (!seen[k]) { seen[k] = 1; out.push(d); }
+    }
+    $('descList').innerHTML = out.map(function (d) { return '<option value="' + esc(d) + '">'; }).join('');
+  }
+
+  function resetForm() {
+    $('fAmount').value = ''; $('fDesc').value = ''; $('fDate').value = todayStr();
+    form.category = ''; editingId = null; $('editNote').classList.remove('show'); $('saveBtn').textContent = 'Save';
+    paintChoices();
+  }
+
+  $('addForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var amount = parseFloat($('fAmount').value.replace(/,/g, ''));
+    var desc = $('fDesc').value.trim();
+    var date = $('fDate').value || todayStr();
+    if (!(amount > 0)) { toast('Enter an amount'); $('fAmount').focus(); return; }
+    if (!desc) { toast('Enter a description'); $('fDesc').focus(); return; }
+
+    if (editingId) removeEntry(editingId, true);
+    entries.push({ id: newId(), date: date, desc: desc, amount: amount, method: form.method, category: form.category,
+                   created: new Date().toISOString(), synced: false });
+    settings.method = form.method; save(K.settings, settings);
+    persist();
+    var wasEdit = !!editingId;
+    resetForm(); refreshSuggestions(); paintPill();
+    toast(wasEdit ? 'Updated' : 'Saved ✓');
+    if (wasEdit) show('list');
+    sync();
+  });
+  $('cancelEdit').addEventListener('click', function () { resetForm(); show('list'); });
+
+  function removeEntry(id, silent) {
+    var e = entries.find(function (x) { return x.id === id; });
+    if (!e) return;
+    entries = entries.filter(function (x) { return x.id !== id; });
+    if (e.synced && deletes.indexOf(id) < 0) deletes.push(id);
+    persist();
+    if (!silent) { toast('Deleted'); sync(); }
+  }
+
+  // ---------- month navigation (shared by list + summary) ----------
+  var now = new Date(); var view = { y: now.getFullYear(), m: now.getMonth() + 1 };
+  document.querySelectorAll('.monthbar button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      view.m += +b.dataset.step;
+      if (view.m < 1) { view.m = 12; view.y--; } if (view.m > 12) { view.m = 1; view.y++; }
+      renderList(); renderSummary();
+    });
+  });
+  function monthEntries() {
+    var prefix = view.y + '-' + pad(view.m) + '-';
+    return entries.filter(function (e) { return e.date.indexOf(prefix) === 0; });
+  }
+
+  // ---------- list ----------
+  function renderList() {
+    document.querySelectorAll('.monthLabel').forEach(function (el) { el.textContent = monthName(view.y, view.m); });
+    var list = monthEntries().slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : (a.created < b.created ? 1 : -1); });
+    if (!list.length) { $('listBox').innerHTML = '<div class="empty">No expenses this month yet.</div>'; return; }
+    var html = '', day = null, dayTotals = {};
+    list.forEach(function (e) { dayTotals[e.date] = (dayTotals[e.date] || 0) + e.amount; });
+    list.forEach(function (e) {
+      if (e.date !== day) { day = e.date; html += '<div class="daylabel"><span>' + dayLabel(day) + '</span><span>' + fmt(dayTotals[day]) + '</span></div>'; }
+      html += '<button type="button" class="entry" data-id="' + esc(e.id) + '">' +
+        '<span class="dot' + (e.synced ? '' : ' wait') + '" title="' + (e.synced ? 'Backed up' : 'Waiting to back up') + '"></span>' +
+        '<span class="grow"><span class="d">' + esc(e.desc) + '</span><br><span class="m">' + esc(e.method) + ' · ' + esc(e.category || 'Uncategorized') + '</span></span>' +
+        '<span class="a">' + fmt(e.amount) + '</span></button>';
+    });
+    html += '<p class="hint" style="text-align:center">Green dot = backed up to Google Sheet · Orange ring = waiting</p>';
+    $('listBox').innerHTML = html;
+  }
+  $('listBox').addEventListener('click', function (ev) {
+    var b = ev.target.closest('.entry'); if (!b) return;
+    var e = entries.find(function (x) { return x.id === b.dataset.id; }); if (!e) return;
+    openId = e.id;
+    $('shTitle').textContent = e.desc + ' — ' + fmt(e.amount);
+    $('shInfo').textContent = dayLabel(e.date) + ' · ' + e.method + ' · ' + (e.category || 'Uncategorized') + ' · ' + (e.synced ? 'Backed up' : 'Waiting to back up');
+    $('sheetBg').classList.add('show');
+  });
+  function closeSheet() { $('sheetBg').classList.remove('show'); openId = null; }
+  $('shClose').addEventListener('click', closeSheet);
+  $('sheetBg').addEventListener('click', function (e) { if (e.target === this) closeSheet(); });
+  $('shDelete').addEventListener('click', function () {
+    if (!openId) return;
+    if (!confirm('Delete this expense?')) return;
+    removeEntry(openId); closeSheet(); renderList(); paintPill();
+  });
+  $('shEdit').addEventListener('click', function () {
+    var e = entries.find(function (x) { return x.id === openId; }); if (!e) return;
+    closeSheet(); show('add');
+    editingId = e.id;
+    $('fAmount').value = fmt(e.amount); $('fDesc').value = e.desc; $('fDate').value = e.date;
+    form.method = e.method; form.category = e.category || ''; paintChoices();
+    $('editNote').classList.add('show'); $('saveBtn').textContent = 'Save changes';
+  });
+
+  // ---------- summary ----------
+  function bars(rows, total) {
+    return rows.map(function (r) {
+      var pct = total > 0 ? Math.round(r.v / total * 100) : 0;
+      return '<div class="bar-row"><div class="row"><span>' + esc(r.k) + '</span><span><strong>' + fmt(r.v) + '</strong> <span class="sub">' + pct + '%</span></span></div>' +
+             '<div class="bar' + (r.warn ? ' warnbar' : '') + '"><i style="width:' + pct + '%"></i></div></div>';
+    }).join('');
+  }
+  function renderSummary() {
+    document.querySelectorAll('.monthLabel').forEach(function (el) { el.textContent = monthName(view.y, view.m); });
+    var list = monthEntries();
+    var total = 0, biggest = null, byM = {}, byC = {};
+    METHODS.forEach(function (m) { byM[m] = 0; }); CATEGORIES.forEach(function (c) { byC[c] = 0; });
+    var uncat = 0;
+    list.forEach(function (e) {
+      total += e.amount;
+      if (!biggest || e.amount > biggest.amount) biggest = e;
+      byM[e.method] = (byM[e.method] || 0) + e.amount;
+      if (e.category && byC.hasOwnProperty(e.category)) byC[e.category] += e.amount; else uncat += e.amount;
+    });
+    if (!list.length) { $('summaryBox').innerHTML = '<div class="card empty">No expenses this month.</div>'; return; }
+    var catRows = CATEGORIES.map(function (c) { return { k: c, v: byC[c] }; }).filter(function (r) { return r.v > 0; })
+      .sort(function (a, b) { return b.v - a.v; });
+    if (uncat > 0) catRows.push({ k: 'Uncategorized', v: uncat, warn: true });
+
+    // last 6 months
+    var hist = '';
+    for (var i = 0; i < 6; i++) {
+      var d = new Date(view.y, view.m - 1 - i, 1);
+      var p = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-';
+      var t = entries.reduce(function (s, e) { return e.date.indexOf(p) === 0 ? s + e.amount : s; }, 0);
+      hist += '<div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)"><span>' +
+        d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) + '</span><strong>' + fmt(t) + '</strong></div>';
+    }
+
+    $('summaryBox').innerHTML =
+      '<div class="card"><div class="sub">Total spent</div><div class="big">' + fmt(total) + '</div>' +
+      '<div class="sub">' + list.length + ' entr' + (list.length === 1 ? 'y' : 'ies') + ' · biggest: ' + esc(biggest.desc) + ' (' + fmt(biggest.amount) + ')</div></div>' +
+      '<div class="card"><h2>By payment method</h2>' + bars(METHODS.map(function (m) { return { k: m, v: byM[m] || 0 }; }), total) + '</div>' +
+      '<div class="card"><h2>By category</h2>' + bars(catRows, total) +
+        (uncat > 0 ? '<p class="hint">Tip: tap an entry in the List tab → Edit to give it a category.</p>' : '') + '</div>' +
+      '<div class="card"><h2>Recent months</h2>' + hist + '</div>';
+  }
+
+  // ---------- settings ----------
+  function renderSettings() {
+    $('sUrl').value = settings.url || ''; $('sKey').value = settings.key || '';
+    var p = pendingCount();
+    $('syncInfo').innerHTML =
+      (p ? '<strong style="color:var(--warn)">' + p + ' change' + (p > 1 ? 's' : '') + ' waiting to back up.</strong>' : '<strong style="color:var(--ok)">Everything is backed up.</strong>') +
+      '<br>Last backup: ' + (lastSync ? new Date(lastSync).toLocaleString('en-US') : 'never') +
+      '<br>Saved on this phone: ' + entries.length + ' expenses' +
+      (syncState === 'error' ? '<br><span style="color:var(--bad)">Last problem: ' + esc(syncError) + '</span>' : '');
+  }
+
+  $('saveSettings').addEventListener('click', function () {
+    settings.url = $('sUrl').value.trim(); settings.key = $('sKey').value.trim(); save(K.settings, settings);
+    if (!connected()) { $('connStatus').textContent = 'Please fill in both boxes.'; paintPill(); return; }
+    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(settings.url)) {
+      $('connStatus').textContent = 'That doesn\'t look like a Google Apps Script web app URL. It should start with https://script.google.com/'; return;
+    }
+    $('connStatus').textContent = 'Testing…';
+    call({ action: 'ping' }).then(function (r) {
+      $('connStatus').innerHTML = '<span style="color:var(--ok);font-weight:700">Connected ✓</span> to sheet "' + esc(r.sheet || '') + '".';
+      sync();
+    }).catch(function (err) { $('connStatus').innerHTML = '<span style="color:var(--bad);font-weight:700">Not connected.</span> ' + esc(err.message); });
+  });
+  $('syncNow').addEventListener('click', function () { sync(true); });
+  $('pullNow').addEventListener('click', pull);
+  $('exportCsv').addEventListener('click', exportCsv);
+  $('syncPill').addEventListener('click', function () { show('settings'); });
+
+  // ---------- talking to Google Sheet ----------
+  function call(payload) {
+    if (!connected()) return Promise.reject(new Error('Google Sheet not set up yet (Settings).'));
+    payload.key = settings.key;
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 25000);
+    // text/plain body avoids a CORS pre-check that Apps Script can't answer
+    return fetch(settings.url, { method: 'POST', body: JSON.stringify(payload), redirect: 'follow', signal: ctrl ? ctrl.signal : undefined })
+      .then(function (res) { return res.text(); })
+      .then(function (txt) {
+        clearTimeout(timer);
+        var data; try { data = JSON.parse(txt); } catch (e) { throw new Error('Unexpected reply. Check the URL and that the script is deployed with access "Anyone".'); }
+        if (!data.ok) throw new Error(data.error || 'The sheet refused the request.');
+        return data;
+      }, function (err) {
+        clearTimeout(timer);
+        throw new Error(navigator.onLine === false ? 'No internet connection.' : 'Could not reach Google. ' + (err && err.name === 'AbortError' ? '(timed out)' : ''));
+      });
+  }
+
+  var syncing = false;
+  function sync(manual) {
+    if (syncing || !connected()) { paintPill(); if (manual && !connected()) toast('Set up Google Sheet in Settings first'); return Promise.resolve(); }
+    if (navigator.onLine === false) { paintPill(); if (manual) toast('No internet — will back up later'); return Promise.resolve(); }
+    var add = entries.filter(function (e) { return !e.synced; }).map(function (e) {
+      return { id: e.id, date: e.date, desc: e.desc, amount: e.amount, method: e.method, category: e.category || '' };
+    });
+    var remove = deletes.slice();
+    if (!add.length && !remove.length) { if (manual) toast('Everything is already backed up'); lastSyncNow(); return Promise.resolve(); }
+    syncing = true; syncState = 'syncing'; paintPill();
+    return call({ action: 'sync', add: add, remove: remove }).then(function (r) {
+      var addedIds = r.added || [], removedIds = r.removed || [];
+      entries.forEach(function (e) { if (addedIds.indexOf(e.id) >= 0) e.synced = true; });
+      deletes = deletes.filter(function (id) { return removedIds.indexOf(id) < 0; });
+      persist(); syncState = 'idle'; syncError = ''; lastSyncNow();
+      if (manual) toast('Backed up ✓');
+    }).catch(function (err) {
+      syncState = 'error'; syncError = err.message;
+      if (manual) toast(err.message);
+    }).then(function () {
+      syncing = false; paintPill();
+      if (document.querySelector('#view-list.active')) renderList();
+      if (document.querySelector('#view-settings.active')) renderSettings();
+    });
+  }
+  function lastSyncNow() { lastSync = new Date().toISOString(); save(K.lastSync, lastSync); }
+
+  function pull() {
+    if (!connected()) { toast('Set up Google Sheet first'); return; }
+    if (navigator.onLine === false) { toast('No internet connection'); return; }
+    toast('Getting latest…');
+    sync().then(function () { return call({ action: 'list' }); }).then(function (r) {
+      var pending = entries.filter(function (e) { return !e.synced; });
+      var pendingIds = {}; pending.forEach(function (e) { pendingIds[e.id] = 1; });
+      var fromSheet = (r.rows || []).filter(function (x) { return !pendingIds[x.id] && deletes.indexOf(x.id) < 0; }).map(function (x) {
+        return { id: x.id, date: x.date, desc: x.desc || '(no description)', amount: Number(x.amount) || 0,
+                 method: METHODS.indexOf(x.method) >= 0 ? x.method : (x.method || 'Cash'), category: x.category || '',
+                 created: x.created || '', synced: true };
+      }).filter(function (x) { return /^\d{4}-\d{2}-\d{2}$/.test(x.date); });
+      entries = fromSheet.concat(pending);
+      persist(); lastSyncNow(); refreshSuggestions(); renderSettings(); paintPill();
+      toast('Up to date: ' + entries.length + ' expenses');
+    }).catch(function (err) { toast(err.message); });
+  }
+
+  function exportCsv() {
+    var q = function (s) { s = String(s == null ? '' : s); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    var rows = [['Date', 'Description', 'Amount', 'Method', 'Category', 'Backed up']];
+    entries.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; })
+      .forEach(function (e) { rows.push([e.date, e.desc, e.amount, e.method, e.category, e.synced ? 'yes' : 'no']); });
+    var csv = '﻿' + rows.map(function (r) { return r.map(q).join(','); }).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'expenses-' + todayStr() + '.csv';
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  // ---------- status pill ----------
+  function paintPill() {
+    var p = $('syncPill'), n = pendingCount();
+    p.className = 'pill';
+    if (!connected()) { p.textContent = 'Sheet not set up'; p.classList.add('warn'); return; }
+    if (syncState === 'syncing') { p.textContent = 'Backing up…'; return; }
+    if (navigator.onLine === false) { p.textContent = n ? 'Offline · ' + n + ' waiting' : 'Offline'; p.classList.add('warn'); return; }
+    if (syncState === 'error' && n) { p.textContent = n + ' waiting · retry'; p.classList.add('bad'); return; }
+    if (n) { p.textContent = n + ' waiting'; p.classList.add('warn'); return; }
+    p.textContent = 'Backed up ✓';
+  }
+
+  // ---------- start ----------
+  resetForm(); refreshSuggestions(); paintPill();
+  window.addEventListener('online', function () { paintPill(); sync(); });
+  window.addEventListener('offline', paintPill);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) sync(); });
+  setInterval(function () { if (pendingCount()) sync(); }, 60000);
+  sync();
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+  if (navigator.storage && navigator.storage.persist) { try { navigator.storage.persist(); } catch (e) {} }
+})();
+</script>
+</body>
+</html>
