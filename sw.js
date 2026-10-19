@@ -1,6 +1,6 @@
 // Keeps the app working without internet.
 // Bump the version number whenever you upload a changed index.html.
-var CACHE = 'expenses-v1';
+var CACHE = 'expenses-v2';
 var FILES = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {

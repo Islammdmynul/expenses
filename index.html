@@ -77,9 +77,23 @@
   nav.tabs {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
     background: var(--card); border-top: 1px solid var(--line);
-    display: grid; grid-template-columns: repeat(4, 1fr);
+    display: grid; grid-template-columns: repeat(5, 1fr);
     padding-bottom: env(safe-area-inset-bottom);
   }
+  .seg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .seg2 .opt { text-align: left; line-height: 1.25; padding: 10px 12px; }
+  .seg2 .opt small { display: block; font-weight: 400; font-size: 12px; opacity: .8; }
+  .owe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .owe-grid > div { background: var(--bg); border-radius: 12px; padding: 12px; }
+  .owe-grid strong { display: block; font-size: 22px; margin-top: 2px; }
+  .pos { color: var(--ok); }
+  .neg { color: var(--bad); }
+  .backlink { border: 0; background: none; color: var(--brand); font-size: 16px; font-weight: 700; padding: 6px 0 12px; }
+  .person-head { text-align: center; padding: 6px 0 4px; }
+  .person-head .big { font-size: 30px; }
+  .linkbtn { border: 0; background: none; color: var(--brand); font-weight: 700; font-size: 15px; padding: 0; }
+  .preview { font-size: 14px; font-weight: 600; background: var(--brand-soft); color: var(--brand); padding: 10px 12px; border-radius: 10px; margin-bottom: 14px; display: none; }
+  .preview.show { display: block; }
   nav.tabs button {
     border: 0; background: none; color: var(--muted); font-size: 12px; font-weight: 600;
     padding: 8px 0 10px; display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -179,6 +193,69 @@
     <div id="listBox"></div>
   </section>
 
+  <!-- DEBTS -->
+  <section class="view" id="view-debts">
+    <div id="debtHome">
+      <div class="card">
+        <div class="owe-grid">
+          <div><span class="sub">You owe</span><strong class="neg" id="totIOwe">0</strong></div>
+          <div><span class="sub">Owed to you</span><strong class="pos" id="totOwedMe">0</strong></div>
+        </div>
+      </div>
+      <button class="btn" type="button" id="newDebtBtn">+ New debt record</button>
+      <div id="peopleBox" style="margin-top:16px"></div>
+      <p class="hint" style="text-align:center">Debts are kept separate from spending, so they don't change your monthly expense totals.</p>
+    </div>
+
+    <div id="debtPerson" style="display:none">
+      <button type="button" class="backlink" id="backToPeople">‹ All people</button>
+      <div class="card person-head">
+        <div class="sub" id="pName"></div>
+        <div class="big" id="pBal"></div>
+        <div class="sub" id="pBalText"></div>
+      </div>
+      <div class="seg2" id="pQuick" style="margin-bottom:6px">
+        <button type="button" class="opt" data-t="borrow">I borrowed</button>
+        <button type="button" class="opt" data-t="repay_out">I paid back</button>
+        <button type="button" class="opt" data-t="lend">I lent</button>
+        <button type="button" class="opt" data-t="repay_in">They paid me back</button>
+      </div>
+      <div id="pHistory"></div>
+    </div>
+
+    <form class="card" id="debtForm" style="display:none" autocomplete="off" novalidate>
+      <div class="row" style="margin-bottom:12px"><h2 style="margin:0">New debt record</h2><button type="button" class="linkbtn" id="cancelDebt">Cancel</button></div>
+      <div class="field">
+        <label class="f" for="dPerson">Person</label>
+        <input type="text" id="dPerson" list="personList" placeholder="e.g. Minho" maxlength="40">
+        <datalist id="personList"></datalist>
+      </div>
+      <div class="field">
+        <label class="f">What happened?</label>
+        <div class="seg2" id="dType">
+          <button type="button" class="opt" data-t="borrow">I borrowed<small>they gave me money</small></button>
+          <button type="button" class="opt" data-t="repay_out">I paid back<small>I returned money</small></button>
+          <button type="button" class="opt" data-t="lend">I lent<small>I gave them money</small></button>
+          <button type="button" class="opt" data-t="repay_in">They paid me back<small>they returned money</small></button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="f" for="dAmount">Amount</label>
+        <input type="text" id="dAmount" class="amount" inputmode="decimal" placeholder="0">
+      </div>
+      <div class="preview" id="dPreview"></div>
+      <div class="field">
+        <label class="f" for="dDate">Date</label>
+        <input type="date" id="dDate">
+      </div>
+      <div class="field">
+        <label class="f" for="dNote">Note <span style="font-weight:400">(optional)</span></label>
+        <input type="text" id="dNote" placeholder="e.g. for concert tickets" maxlength="120">
+      </div>
+      <button class="btn" type="submit">Save</button>
+    </form>
+  </section>
+
   <!-- SUMMARY -->
   <section class="view" id="view-summary">
     <div class="monthbar">
@@ -214,7 +291,8 @@
     </div>
     <div class="card">
       <h2>Extra backup</h2>
-      <button class="btn ghost" type="button" id="exportCsv">Download all as CSV file</button>
+      <button class="btn ghost" type="button" id="exportCsv">Download expenses as CSV file</button>
+      <button class="btn ghost" type="button" id="exportDebtCsv">Download debts as CSV file</button>
       <p class="hint">Works offline. The file opens in Google Sheets or Excel.</p>
     </div>
   </section>
@@ -225,6 +303,8 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add</button>
   <button type="button" data-view="list">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>List</button>
+  <button type="button" data-view="debts">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M13 4l4 4-4 4M20 16H7M11 12l-4 4 4 4"/></svg>Debts</button>
   <button type="button" data-view="summary">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M12 20V4M19 20v-6"/></svg>Summary</button>
   <button type="button" data-view="settings">
@@ -249,7 +329,14 @@
 
   var CATEGORIES = ['Food', 'Transport', 'Home & bills', 'Shopping', 'Health', 'Giving', 'Other'];
   var METHODS = ['Cash', 'Card', 'Bank'];
-  var K = { entries: 'exp.entries', deletes: 'exp.deletes', settings: 'exp.settings', lastSync: 'exp.lastSync' };
+  var K = { entries: 'exp.entries', deletes: 'exp.deletes', settings: 'exp.settings', lastSync: 'exp.lastSync',
+            debts: 'exp.debts', debtDeletes: 'exp.debtDeletes' };
+  var DEBT_TYPES = {
+    borrow:    { label: 'I borrowed',        sign: -1 },  // I owe them more
+    repay_out: { label: 'I paid back',       sign: +1 },  // I owe them less
+    lend:      { label: 'I lent',            sign: +1 },  // they owe me more
+    repay_in:  { label: 'They paid me back', sign: -1 }   // they owe me less
+  };
 
   // ---------- storage (always guarded) ----------
   function load(key, fallback) {
@@ -263,12 +350,14 @@
   var deletes = load(K.deletes, []);       // ids waiting to be removed from the sheet
   var settings = load(K.settings, { url: '', key: '', method: 'Card' });
   var lastSync = load(K.lastSync, null);
+  var debts = load(K.debts, []);           // {id,date,person,type,amount,note,created,synced}
+  var debtDeletes = load(K.debtDeletes, []);
   var syncState = 'idle';                  // idle | syncing | error
   var syncError = '';
   var editingId = null;
   var openId = null;
 
-  function persist() { save(K.entries, entries); save(K.deletes, deletes); }
+  function persist() { save(K.entries, entries); save(K.deletes, deletes); save(K.debts, debts); save(K.debtDeletes, debtDeletes); }
 
   // ---------- helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -285,7 +374,10 @@
     var p = s.split('-'); var d = new Date(+p[0], +p[1] - 1, +p[2]);
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   }
-  function pendingCount() { return entries.filter(function (e) { return !e.synced; }).length + deletes.length; }
+  function pendingCount() {
+    return entries.filter(function (e) { return !e.synced; }).length + deletes.length +
+           debts.filter(function (d) { return !d.synced; }).length + debtDeletes.length;
+  }
   function connected() { return !!(settings.url && settings.key); }
 
   var toastTimer;
@@ -295,13 +387,14 @@
   }
 
   // ---------- tabs ----------
-  var titles = { add: 'Add expense', list: 'Expenses', summary: 'Monthly summary', settings: 'Settings' };
+  var titles = { add: 'Add expense', list: 'Expenses', debts: 'Debts', summary: 'Monthly summary', settings: 'Settings' };
   function show(view) {
     document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('active', v.id === 'view-' + view); });
     document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.view === view); });
     $('title').textContent = titles[view];
     if (view === 'list') renderList();
     if (view === 'summary') renderSummary();
+    if (view === 'debts') debtScreen('home');
     if (view === 'settings') renderSettings();
     window.scrollTo(0, 0);
   }
@@ -420,16 +513,22 @@
   $('listBox').addEventListener('click', function (ev) {
     var b = ev.target.closest('.entry'); if (!b) return;
     var e = entries.find(function (x) { return x.id === b.dataset.id; }); if (!e) return;
-    openId = e.id;
+    openId = e.id; openKind = 'expense';
     $('shTitle').textContent = e.desc + ' — ' + fmt(e.amount);
     $('shInfo').textContent = dayLabel(e.date) + ' · ' + e.method + ' · ' + (e.category || 'Uncategorized') + ' · ' + (e.synced ? 'Backed up' : 'Waiting to back up');
+    $('shEdit').style.display = '';
     $('sheetBg').classList.add('show');
   });
+  var openKind = 'expense';
   function closeSheet() { $('sheetBg').classList.remove('show'); openId = null; }
   $('shClose').addEventListener('click', closeSheet);
   $('sheetBg').addEventListener('click', function (e) { if (e.target === this) closeSheet(); });
   $('shDelete').addEventListener('click', function () {
     if (!openId) return;
+    if (openKind === 'debt') {
+      if (!confirm('Delete this debt record?')) return;
+      removeDebt(openId); closeSheet(); renderPerson(); paintPill(); return;
+    }
     if (!confirm('Delete this expense?')) return;
     removeEntry(openId); closeSheet(); renderList(); paintPill();
   });
@@ -441,6 +540,151 @@
     form.method = e.method; form.category = e.category || ''; paintChoices();
     $('editNote').classList.add('show'); $('saveBtn').textContent = 'Save changes';
   });
+
+  // ---------- debts ----------
+  function personKey(name) { return String(name || '').trim().toLowerCase(); }
+  function people() {
+    var map = {};
+    debts.forEach(function (d) {
+      var k = personKey(d.person);
+      if (!map[k]) map[k] = { key: k, name: d.person.trim(), bal: 0, last: '' };
+      map[k].bal += DEBT_TYPES[d.type] ? DEBT_TYPES[d.type].sign * d.amount : 0;
+      if (d.date > map[k].last) map[k].last = d.date;
+    });
+    return Object.keys(map).map(function (k) { map[k].bal = Math.round(map[k].bal * 100) / 100; return map[k]; });
+  }
+  function balanceOf(key) { var p = people().find(function (x) { return x.key === key; }); return p ? p.bal : 0; }
+  function balText(bal, name) {
+    if (bal > 0) return esc(name) + ' owes you ' + fmt(bal);
+    if (bal < 0) return 'You owe ' + esc(name) + ' ' + fmt(-bal);
+    return 'All settled with ' + esc(name);
+  }
+
+  var currentPerson = null;    // person key
+  var debtForm = { type: '' };
+  var debtBack = 'home';
+
+  function debtScreen(which) {
+    $('debtHome').style.display = which === 'home' ? '' : 'none';
+    $('debtPerson').style.display = which === 'person' ? '' : 'none';
+    $('debtForm').style.display = which === 'form' ? '' : 'none';
+    if (which === 'home') renderPeople();
+    if (which === 'person') renderPerson();
+    window.scrollTo(0, 0);
+  }
+
+  function renderPeople() {
+    var list = people(), iOwe = 0, owedMe = 0;
+    list.forEach(function (p) { if (p.bal < 0) iOwe -= p.bal; else owedMe += p.bal; });
+    $('totIOwe').textContent = fmt(iOwe); $('totOwedMe').textContent = fmt(owedMe);
+    if (!list.length) { $('peopleBox').innerHTML = '<div class="empty">No debts recorded yet.<br>Tap "New debt record" when you borrow or lend money.</div>'; return; }
+    var open = list.filter(function (p) { return p.bal !== 0; }).sort(function (a, b) { return Math.abs(b.bal) - Math.abs(a.bal); });
+    var settled = list.filter(function (p) { return p.bal === 0; }).sort(function (a, b) { return a.last < b.last ? 1 : -1; });
+    var row = function (p) {
+      var cls = p.bal > 0 ? 'pos' : p.bal < 0 ? 'neg' : 'sub';
+      var label = p.bal > 0 ? 'owes you' : p.bal < 0 ? 'you owe' : 'settled';
+      return '<button type="button" class="entry" data-person="' + esc(p.key) + '"><span class="grow"><span class="d">' + esc(p.name) +
+        '</span><br><span class="m">' + label + '</span></span><span class="a ' + cls + '">' + (p.bal === 0 ? '✓' : fmt(Math.abs(p.bal))) + '</span></button>';
+    };
+    var html = open.map(row).join('');
+    if (settled.length) html += '<div class="daylabel"><span>Settled</span></div>' + settled.map(row).join('');
+    $('peopleBox').innerHTML = html;
+  }
+  $('peopleBox').addEventListener('click', function (e) {
+    var b = e.target.closest('.entry'); if (!b) return;
+    currentPerson = b.dataset.person; debtScreen('person');
+  });
+
+  function renderPerson() {
+    var hist = debts.filter(function (d) { return personKey(d.person) === currentPerson; })
+      .sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : (a.created < b.created ? 1 : -1); });
+    if (!hist.length) { debtScreen('home'); return; }
+    var name = hist[0].person.trim(), bal = balanceOf(currentPerson);
+    $('pName').textContent = name;
+    $('pBal').textContent = bal === 0 ? '0' : fmt(Math.abs(bal));
+    $('pBal').className = 'big ' + (bal > 0 ? 'pos' : bal < 0 ? 'neg' : '');
+    $('pBalText').innerHTML = balText(bal, name);
+    $('pHistory').innerHTML = '<div class="daylabel"><span>History</span></div>' + hist.map(function (d) {
+      var t = DEBT_TYPES[d.type] || { label: d.type, sign: 0 };
+      return '<button type="button" class="entry" data-id="' + esc(d.id) + '">' +
+        '<span class="dot' + (d.synced ? '' : ' wait') + '"></span>' +
+        '<span class="grow"><span class="d">' + esc(t.label) + '</span><br><span class="m">' + dayLabel(d.date) + (d.note ? ' · ' + esc(d.note) : '') + '</span></span>' +
+        '<span class="a">' + fmt(d.amount) + '</span></button>';
+    }).join('');
+  }
+  $('backToPeople').addEventListener('click', function () { debtScreen('home'); });
+  $('pHistory').addEventListener('click', function (ev) {
+    var b = ev.target.closest('.entry'); if (!b) return;
+    var d = debts.find(function (x) { return x.id === b.dataset.id; }); if (!d) return;
+    openId = d.id; openKind = 'debt';
+    $('shTitle').textContent = (DEBT_TYPES[d.type] ? DEBT_TYPES[d.type].label : d.type) + ' — ' + fmt(d.amount);
+    $('shInfo').textContent = d.person + ' · ' + dayLabel(d.date) + (d.note ? ' · ' + d.note : '') + ' · ' + (d.synced ? 'Backed up' : 'Waiting to back up');
+    $('shEdit').style.display = 'none';
+    $('sheetBg').classList.add('show');
+  });
+
+  function openDebtForm(person, type) {
+    $('dPerson').value = person || ''; $('dAmount').value = ''; $('dNote').value = ''; $('dDate').value = todayStr();
+    debtForm.type = type || ''; paintDebtType(); updatePreview();
+    var seen = {}, names = [];
+    debts.forEach(function (d) { var k = personKey(d.person); if (!seen[k]) { seen[k] = 1; names.push(d.person.trim()); } });
+    $('personList').innerHTML = names.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('');
+    debtBack = person ? 'person' : 'home';
+    debtScreen('form');
+    if (!person) $('dPerson').focus();
+  }
+  function paintDebtType() {
+    document.querySelectorAll('#dType .opt').forEach(function (b) { b.classList.toggle('on', b.dataset.t === debtForm.type); });
+  }
+  function updatePreview() {
+    var name = $('dPerson').value.trim(), amt = parseFloat($('dAmount').value.replace(/,/g, '')), t = DEBT_TYPES[debtForm.type];
+    var p = $('dPreview');
+    if (!name || !(amt > 0) || !t) { p.classList.remove('show'); return; }
+    var known = debts.find(function (d) { return personKey(d.person) === personKey(name); });
+    if (known) name = known.person.trim();
+    var after = Math.round((balanceOf(personKey(name)) + t.sign * amt) * 100) / 100;
+    p.innerHTML = 'After saving: ' + balText(after, name); p.classList.add('show');
+  }
+  $('newDebtBtn').addEventListener('click', function () { openDebtForm('', ''); });
+  $('pQuick').addEventListener('click', function (e) {
+    var b = e.target.closest('.opt'); if (!b) return;
+    var hist = debts.find(function (d) { return personKey(d.person) === currentPerson; });
+    openDebtForm(hist ? hist.person.trim() : '', b.dataset.t);
+    $('dAmount').focus();
+  });
+  $('dType').addEventListener('click', function (e) {
+    var b = e.target.closest('.opt'); if (!b) return; debtForm.type = b.dataset.t; paintDebtType(); updatePreview();
+  });
+  $('dAmount').addEventListener('input', function () {
+    var v = this.value.replace(/[^0-9.]/g, '');
+    var i = v.indexOf('.'); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, '');
+    var parts = v.split('.'); parts[0] = parts[0].replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    this.value = parts.join('.'); updatePreview();
+  });
+  $('dPerson').addEventListener('input', updatePreview);
+  $('cancelDebt').addEventListener('click', function () { debtScreen(debtBack); });
+  $('debtForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var person = $('dPerson').value.trim(), amount = parseFloat($('dAmount').value.replace(/,/g, ''));
+    if (!person) { toast('Enter a name'); $('dPerson').focus(); return; }
+    if (!DEBT_TYPES[debtForm.type]) { toast('Choose what happened'); return; }
+    if (!(amount > 0)) { toast('Enter an amount'); $('dAmount').focus(); return; }
+    // reuse the existing spelling of a known person
+    var known = debts.find(function (d) { return personKey(d.person) === personKey(person); });
+    if (known) person = known.person.trim();
+    debts.push({ id: newId(), date: $('dDate').value || todayStr(), person: person, type: debtForm.type, amount: amount,
+                 note: $('dNote').value.trim(), created: new Date().toISOString(), synced: false });
+    persist(); paintPill(); toast('Saved ✓');
+    currentPerson = personKey(person); debtScreen('person');
+    sync();
+  });
+
+  function removeDebt(id) {
+    var d = debts.find(function (x) { return x.id === id; }); if (!d) return;
+    debts = debts.filter(function (x) { return x.id !== id; });
+    if (d.synced && debtDeletes.indexOf(id) < 0) debtDeletes.push(id);
+    persist(); toast('Deleted'); sync();
+  }
 
   // ---------- summary ----------
   function bars(rows, total) {
@@ -493,7 +737,7 @@
     $('syncInfo').innerHTML =
       (p ? '<strong style="color:var(--warn)">' + p + ' change' + (p > 1 ? 's' : '') + ' waiting to back up.</strong>' : '<strong style="color:var(--ok)">Everything is backed up.</strong>') +
       '<br>Last backup: ' + (lastSync ? new Date(lastSync).toLocaleString('en-US') : 'never') +
-      '<br>Saved on this phone: ' + entries.length + ' expenses' +
+      '<br>Saved on this phone: ' + entries.length + ' expenses, ' + debts.length + ' debt records' +
       (syncState === 'error' ? '<br><span style="color:var(--bad)">Last problem: ' + esc(syncError) + '</span>' : '');
   }
 
@@ -512,6 +756,7 @@
   $('syncNow').addEventListener('click', function () { sync(true); });
   $('pullNow').addEventListener('click', pull);
   $('exportCsv').addEventListener('click', exportCsv);
+  $('exportDebtCsv').addEventListener('click', exportDebtCsv);
   $('syncPill').addEventListener('click', function () { show('settings'); });
 
   // ---------- talking to Google Sheet ----------
@@ -542,14 +787,31 @@
       return { id: e.id, date: e.date, desc: e.desc, amount: e.amount, method: e.method, category: e.category || '' };
     });
     var remove = deletes.slice();
-    if (!add.length && !remove.length) { if (manual) toast('Everything is already backed up'); lastSyncNow(); return Promise.resolve(); }
+    var debtAdd = debts.filter(function (d) { return !d.synced; }).map(function (d) {
+      return { id: d.id, date: d.date, person: d.person, type: d.type, amount: d.amount, note: d.note || '' };
+    });
+    var debtRemove = debtDeletes.slice();
+    var hasDebtWork = debtAdd.length || debtRemove.length;
+    if (!add.length && !remove.length && !hasDebtWork) { if (manual) toast('Everything is already backed up'); lastSyncNow(); return Promise.resolve(); }
     syncing = true; syncState = 'syncing'; paintPill();
-    return call({ action: 'sync', add: add, remove: remove }).then(function (r) {
+    return call({ action: 'sync', add: add, remove: remove, debtAdd: debtAdd, debtRemove: debtRemove }).then(function (r) {
       var addedIds = r.added || [], removedIds = r.removed || [];
       entries.forEach(function (e) { if (addedIds.indexOf(e.id) >= 0) e.synced = true; });
       deletes = deletes.filter(function (id) { return removedIds.indexOf(id) < 0; });
-      persist(); syncState = 'idle'; syncError = ''; lastSyncNow();
-      if (manual) toast('Backed up ✓');
+      var oldScript = hasDebtWork && !r.debtsAdded;
+      if (!oldScript) {
+        var dAdded = r.debtsAdded || [], dRemoved = r.debtsRemoved || [];
+        debts.forEach(function (d) { if (dAdded.indexOf(d.id) >= 0) d.synced = true; });
+        debtDeletes = debtDeletes.filter(function (id) { return dRemoved.indexOf(id) < 0; });
+      }
+      persist(); lastSyncNow();
+      if (oldScript) {
+        syncState = 'error'; syncError = 'Debts could not back up: please update the Google Sheet script (Code.gs) and deploy a new version.';
+        if (manual) toast('Update the Google Sheet script for debts');
+      } else {
+        syncState = 'idle'; syncError = '';
+        if (manual) toast('Backed up ✓');
+      }
     }).catch(function (err) {
       syncState = 'error'; syncError = err.message;
       if (manual) toast(err.message);
@@ -557,6 +819,7 @@
       syncing = false; paintPill();
       if (document.querySelector('#view-list.active')) renderList();
       if (document.querySelector('#view-settings.active')) renderSettings();
+      if (document.querySelector('#view-debts.active') && $('debtPerson').style.display !== 'none') renderPerson();
     });
   }
   function lastSyncNow() { lastSync = new Date().toISOString(); save(K.lastSync, lastSync); }
@@ -574,20 +837,38 @@
                  created: x.created || '', synced: true };
       }).filter(function (x) { return /^\d{4}-\d{2}-\d{2}$/.test(x.date); });
       entries = fromSheet.concat(pending);
+      if (r.debts) {   // older scripts don't send debts; then keep what's on the phone
+        var dPending = debts.filter(function (d) { return !d.synced; });
+        var dPendingIds = {}; dPending.forEach(function (d) { dPendingIds[d.id] = 1; });
+        var dFromSheet = r.debts.filter(function (x) { return !dPendingIds[x.id] && debtDeletes.indexOf(x.id) < 0; }).map(function (x) {
+          return { id: x.id, date: x.date, person: String(x.person || '').trim() || '(no name)', type: x.type, amount: Number(x.amount) || 0,
+                   note: x.note || '', created: x.created || '', synced: true };
+        }).filter(function (x) { return /^\d{4}-\d{2}-\d{2}$/.test(x.date) && DEBT_TYPES[x.type]; });
+        debts = dFromSheet.concat(dPending);
+      }
       persist(); lastSyncNow(); refreshSuggestions(); renderSettings(); paintPill();
-      toast('Up to date: ' + entries.length + ' expenses');
+      toast('Up to date: ' + entries.length + ' expenses, ' + debts.length + ' debt records');
     }).catch(function (err) { toast(err.message); });
   }
 
-  function exportCsv() {
+  function downloadCsv(rows, name) {
     var q = function (s) { s = String(s == null ? '' : s); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    var csv = '﻿' + rows.map(function (r) { return r.map(q).join(','); }).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name + '-' + todayStr() + '.csv';
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  function exportCsv() {
     var rows = [['Date', 'Description', 'Amount', 'Method', 'Category', 'Backed up']];
     entries.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; })
       .forEach(function (e) { rows.push([e.date, e.desc, e.amount, e.method, e.category, e.synced ? 'yes' : 'no']); });
-    var csv = '﻿' + rows.map(function (r) { return r.map(q).join(','); }).join('\r\n');
-    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'expenses-' + todayStr() + '.csv';
-    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    downloadCsv(rows, 'expenses');
+  }
+  function exportDebtCsv() {
+    var rows = [['Date', 'Person', 'Type', 'Amount', 'Note', 'Backed up']];
+    debts.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; })
+      .forEach(function (d) { rows.push([d.date, d.person, DEBT_TYPES[d.type] ? DEBT_TYPES[d.type].label : d.type, d.amount, d.note, d.synced ? 'yes' : 'no']); });
+    downloadCsv(rows, 'debts');
   }
 
   // ---------- status pill ----------
