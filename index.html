@@ -124,6 +124,12 @@
   .entry .a { font-weight: 700; white-space: nowrap; }
   .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--ok); }
   .dot.wait { background: transparent; border: 2px solid var(--warn); }
+  .noday {
+    display: flex; justify-content: space-between; align-items: center;
+    border: 1px dashed var(--line); border-radius: 12px; padding: 9px 14px; margin-bottom: 8px;
+    color: var(--muted); font-size: 14px;
+  }
+  .noday + .noday, .daylabel + .noday { margin-top: 0; }
   .empty { text-align: center; color: var(--muted); padding: 36px 12px; }
   .toast {
     position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
@@ -327,7 +333,7 @@
 (function () {
   'use strict';
 
-  var CATEGORIES = ['Food', 'Transport', 'Home & bills', 'Shopping', 'Health', 'Giving', 'Other'];
+  var CATEGORIES = ['Food', 'Drink', 'Transport', 'Home & bills', 'Shopping', 'Health', 'Giving', 'Other'];
   var METHODS = ['Cash', 'Card', 'Bank'];
   var K = { entries: 'exp.entries', deletes: 'exp.deletes', settings: 'exp.settings', lastSync: 'exp.lastSync',
             debts: 'exp.debts', debtDeletes: 'exp.debtDeletes' };
@@ -493,19 +499,43 @@
     return entries.filter(function (e) { return e.date.indexOf(prefix) === 0; });
   }
 
+  // Every day of the viewed month, newest first: up to today for this month, the whole month for past months.
+  // Days after today are included only if something was entered for them.
+  function monthDays() {
+    var today = todayStr(), out = [];
+    var last = new Date(view.y, view.m, 0).getDate();
+    var withEntries = {};
+    monthEntries().forEach(function (e) { withEntries[e.date] = 1; });
+    for (var d = last; d >= 1; d--) {
+      var s = view.y + '-' + pad(view.m) + '-' + pad(d);
+      if (s <= today || withEntries[s]) out.push(s);
+    }
+    return out;
+  }
+
   // ---------- list ----------
   function renderList() {
     document.querySelectorAll('.monthLabel').forEach(function (el) { el.textContent = monthName(view.y, view.m); });
     var list = monthEntries().slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : (a.created < b.created ? 1 : -1); });
-    if (!list.length) { $('listBox').innerHTML = '<div class="empty">No expenses this month yet.</div>'; return; }
-    var html = '', day = null, dayTotals = {};
-    list.forEach(function (e) { dayTotals[e.date] = (dayTotals[e.date] || 0) + e.amount; });
-    list.forEach(function (e) {
-      if (e.date !== day) { day = e.date; html += '<div class="daylabel"><span>' + dayLabel(day) + '</span><span>' + fmt(dayTotals[day]) + '</span></div>'; }
-      html += '<button type="button" class="entry" data-id="' + esc(e.id) + '">' +
-        '<span class="dot' + (e.synced ? '' : ' wait') + '" title="' + (e.synced ? 'Backed up' : 'Waiting to back up') + '"></span>' +
-        '<span class="grow"><span class="d">' + esc(e.desc) + '</span><br><span class="m">' + esc(e.method) + ' · ' + esc(e.category || 'Uncategorized') + '</span></span>' +
-        '<span class="a">' + fmt(e.amount) + '</span></button>';
+    var days = monthDays();
+    if (!days.length) { $('listBox').innerHTML = '<div class="empty">This month hasn\'t started yet.</div>'; return; }
+    var byDay = {};
+    list.forEach(function (e) { (byDay[e.date] = byDay[e.date] || []).push(e); });
+    var html = '';
+    days.forEach(function (day) {
+      var items = byDay[day];
+      if (!items) {   // a day with no spending still gets its own line, so the calendar never "shifts"
+        html += '<div class="noday"><span>' + dayLabel(day) + ' · No spending</span><span>0</span></div>';
+        return;
+      }
+      var tot = items.reduce(function (s, e) { return s + e.amount; }, 0);
+      html += '<div class="daylabel"><span>' + dayLabel(day) + '</span><span>' + fmt(tot) + '</span></div>';
+      items.forEach(function (e) {
+        html += '<button type="button" class="entry" data-id="' + esc(e.id) + '">' +
+          '<span class="dot' + (e.synced ? '' : ' wait') + '" title="' + (e.synced ? 'Backed up' : 'Waiting to back up') + '"></span>' +
+          '<span class="grow"><span class="d">' + esc(e.desc) + '</span><br><span class="m">' + esc(e.method) + ' · ' + esc(e.category || 'Uncategorized') + '</span></span>' +
+          '<span class="a">' + fmt(e.amount) + '</span></button>';
+      });
     });
     html += '<p class="hint" style="text-align:center">Green dot = backed up to Google Sheet · Orange ring = waiting</p>';
     $('listBox').innerHTML = html;
@@ -723,7 +753,13 @@
 
     $('summaryBox').innerHTML =
       '<div class="card"><div class="sub">Total spent</div><div class="big">' + fmt(total) + '</div>' +
-      '<div class="sub">' + list.length + ' entr' + (list.length === 1 ? 'y' : 'ies') + ' · biggest: ' + esc(biggest.desc) + ' (' + fmt(biggest.amount) + ')</div></div>' +
+      '<div class="sub">' + list.length + ' entr' + (list.length === 1 ? 'y' : 'ies') + ' · biggest: ' + esc(biggest.desc) + ' (' + fmt(biggest.amount) + ')</div>' +
+      (function () {
+        var days = monthDays(), spent = {};
+        list.forEach(function (e) { spent[e.date] = 1; });
+        var free = days.filter(function (d) { return !spent[d]; }).length;
+        return days.length ? '<div class="sub">' + free + ' of ' + days.length + ' days with no spending</div>' : '';
+      })() + '</div>' +
       '<div class="card"><h2>By payment method</h2>' + bars(METHODS.map(function (m) { return { k: m, v: byM[m] || 0 }; }), total) + '</div>' +
       '<div class="card"><h2>By category</h2>' + bars(catRows, total) +
         (uncat > 0 ? '<p class="hint">Tip: tap an entry in the List tab → Edit to give it a category.</p>' : '') + '</div>' +
